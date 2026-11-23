@@ -64,17 +64,40 @@ fi
 
 # Only reinstall when requirements.txt changed (keeps boots fast), unless the
 # admin asked for packages to always be upgraded (picks up yt-dlp fixes).
+# Downloads are retried generously because some hosts have flaky connections.
+PIP_OPTS=(-q --retries 5 --timeout 30)
+if "$VENV/bin/pip" install --help 2>/dev/null | grep -q -- "--resume-retries"; then
+    PIP_OPTS+=(--resume-retries 20)
+fi
+
+pip_install() {
+    local attempt
+    for attempt in 1 2; do
+        "$VENV/bin/pip" install "${PIP_OPTS[@]}" "$@" && return 0
+        if [[ "$attempt" -lt 2 ]]; then
+            err "pip install failed (attempt ${attempt}/2), retrying in 5s..."
+            sleep 5
+        fi
+    done
+    return 1
+}
+
 REQ_SHA="$(sha256sum requirements.txt | cut -d' ' -f1)"
-if [[ "${ALWAYS_UPGRADE_PACKAGES:-1}" == "1" ]]; then
+INSTALLED_SHA="$(cat "$VENV/.requirements.sha" 2>/dev/null)"
+
+if [[ "${ALWAYS_UPGRADE_PACKAGES:-1}" == "1" || "$INSTALLED_SHA" != "$REQ_SHA" ]]; then
     log "Installing / upgrading Python dependencies..."
-    "$VENV/bin/pip" install -q --upgrade pip wheel
-    "$VENV/bin/pip" install -q --upgrade -r requirements.txt || { err "pip install failed."; exit 1; }
-    echo "$REQ_SHA" > "$VENV/.requirements.sha"
-elif [[ "$(cat "$VENV/.requirements.sha" 2>/dev/null)" != "$REQ_SHA" ]]; then
-    log "requirements.txt changed, installing Python dependencies..."
-    "$VENV/bin/pip" install -q --upgrade pip wheel
-    "$VENV/bin/pip" install -q -r requirements.txt || { err "pip install failed."; exit 1; }
-    echo "$REQ_SHA" > "$VENV/.requirements.sha"
+    pip_install --upgrade pip wheel || true
+    if pip_install --upgrade -r requirements.txt; then
+        echo "$REQ_SHA" > "$VENV/.requirements.sha"
+    elif [[ -n "$INSTALLED_SHA" ]]; then
+        # A previous install worked: start on the packages we already have
+        # rather than taking the bot offline over a network hiccup.
+        err "Could not upgrade dependencies (network issue?). Starting with the currently installed packages."
+    else
+        err "Could not install dependencies and none are installed yet. Check the server's network and restart."
+        exit 1
+    fi
 else
     log "Python dependencies are up to date."
 fi
