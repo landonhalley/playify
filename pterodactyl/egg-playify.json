@@ -1,0 +1,134 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": "https://raw.githubusercontent.com/landonhalley/playify/main/pterodactyl/egg-playify.json"
+    },
+    "exported_at": "2026-11-23T00:00:00+00:00",
+    "name": "Playify",
+    "author": "landonhalley@users.noreply.github.com",
+    "description": "Playify - a minimalist, self-hosted Discord music bot (YouTube, Spotify, SoundCloud, Deezer, Apple Music and more). Installs from the landonhalley/playify fork and automatically updates to the latest commit on every start.",
+    "features": null,
+    "docker_images": {
+        "Python 3.12": "ghcr.io/parkervcp/yolks:python_3.12",
+        "Python 3.13": "ghcr.io/parkervcp/yolks:python_3.13",
+        "Python 3.11": "ghcr.io/parkervcp/yolks:python_3.11"
+    },
+    "file_denylist": [],
+    "startup": "bash pterodactyl/update.sh; exec bash pterodactyl/boot.sh",
+    "config": {
+        "files": "{}",
+        "startup": "{\"done\": \"is online.\"}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\n# Playify - Pterodactyl / Pelican installation script.\n# Runs once inside the installer container (as root) with the server's files\n# mounted at /mnt/server. Python dependencies are installed on first boot by\n# pterodactyl/boot.sh, using the Python version of the selected Docker image.\n\nset -e\n\napt-get update -qq\napt-get install -y -qq --no-install-recommends git ca-certificates curl > /dev/null\n\nmkdir -p /mnt/server\ncd /mnt/server\n\nREPO=\"${GIT_REPO:-https://github.com/landonhalley/playify}\"\nBRANCH=\"${GIT_BRANCH:-main}\"\n[[ \"$REPO\" != *.git ]] && REPO=\"${REPO}.git\"\n\nCLONE_URL=\"$REPO\"\nif [[ -n \"${GIT_TOKEN:-}\" ]]; then\n    CLONE_URL=\"https://${GIT_USERNAME:-git}:${GIT_TOKEN}@${REPO#https://}\"\nfi\n\necho \"Installing Playify from ${REPO%.git} (branch: ${BRANCH})\"\n\nif [[ -d .git ]]; then\n    echo \"Existing installation found, updating it in place...\"\n    git remote set-url origin \"$REPO\"\n    git -c credential.helper= fetch --depth 1 \"$CLONE_URL\" \"$BRANCH\"\n    git checkout --force -B \"$BRANCH\" FETCH_HEAD\n    git reset --hard FETCH_HEAD\nelse\n    # Clone into a temp dir and copy over, so a reinstall onto a non-empty\n    # server keeps user files such as .env and data/.\n    TMP=\"$(mktemp -d)\"\n    git -c credential.helper= clone --depth 1 --branch \"$BRANCH\" \"$CLONE_URL\" \"$TMP/playify\"\n    git -C \"$TMP/playify\" remote set-url origin \"$REPO\"\n    cp -a \"$TMP/playify/.\" /mnt/server/\n    rm -rf \"$TMP\"\nfi\n\nmkdir -p data bin\nchmod +x pterodactyl/*.sh 2>/dev/null || true\n\necho \"Playify installed at commit $(git rev-parse --short HEAD).\"\necho \"Set your Discord token under Startup and start the server.\"\n",
+            "container": "ghcr.io/parkervcp/installers:debian",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Discord Bot Token",
+            "description": "Your bot token from https://discord.com/developers/applications (Bot -> Reset Token). Required.",
+            "env_variable": "DISCORD_TOKEN",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:200",
+            "field_type": "text"
+        },
+        {
+            "name": "Spotify Client ID",
+            "description": "Optional. Enables the Spotify API. Get one at https://developer.spotify.com/dashboard",
+            "env_variable": "SPOTIFY_CLIENT_ID",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:100",
+            "field_type": "text"
+        },
+        {
+            "name": "Spotify Client Secret",
+            "description": "Optional. Pairs with the Spotify Client ID.",
+            "env_variable": "SPOTIFY_CLIENT_SECRET",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:100",
+            "field_type": "text"
+        },
+        {
+            "name": "Genius Token",
+            "description": "Optional. Improves lyrics lookups. Get one at https://genius.com/api-clients",
+            "env_variable": "GENIUS_TOKEN",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:200",
+            "field_type": "text"
+        },
+        {
+            "name": "Auto Update",
+            "description": "1 = pull the latest version of the bot from the git repository on every start. 0 = never update automatically.",
+            "env_variable": "AUTO_UPDATE",
+            "default_value": "1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|boolean",
+            "field_type": "text"
+        },
+        {
+            "name": "Always Upgrade Packages",
+            "description": "1 = upgrade Python packages (yt-dlp, discord.py, ...) on every start, which keeps YouTube playback working but makes boots slower. 0 = only install when requirements.txt changes.",
+            "env_variable": "ALWAYS_UPGRADE_PACKAGES",
+            "default_value": "1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|boolean",
+            "field_type": "text"
+        },
+        {
+            "name": "Git Repository",
+            "description": "Repository the bot is installed and updated from.",
+            "env_variable": "GIT_REPO",
+            "default_value": "https://github.com/landonhalley/playify",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string|max:255",
+            "field_type": "text"
+        },
+        {
+            "name": "Git Branch",
+            "description": "Branch to install and track for updates.",
+            "env_variable": "GIT_BRANCH",
+            "default_value": "main",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string|max:100",
+            "field_type": "text"
+        },
+        {
+            "name": "Git Username",
+            "description": "Only needed if the repository is private.",
+            "env_variable": "GIT_USERNAME",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "nullable|string|max:100",
+            "field_type": "text"
+        },
+        {
+            "name": "Git Access Token",
+            "description": "Only needed if the repository is private. A GitHub personal access token with read access.",
+            "env_variable": "GIT_TOKEN",
+            "default_value": "",
+            "user_viewable": false,
+            "user_editable": false,
+            "rules": "nullable|string|max:255",
+            "field_type": "text"
+        }
+    ]
+}

@@ -19,8 +19,8 @@ from rich.progress import Progress, BarColumn, TextColumn, DownloadColumn, Trans
 from .platform_utils import is_windows, apply_update_and_restart
 from .theme import BLUE_ICE, BLUE_LIGHT, GREEN, RED, YELLOW, GRAY, WHITE, ICON_SPARK, ICON_ROCKET, BLUE_NAVY
 
-GITHUB_API_URL = "https://api.github.com/repos/alan7383/playify/commits/main"
-GITHUB_ZIP_URL = "https://github.com/alan7383/playify/archive/refs/heads/main.zip"
+GITHUB_API_URL = "https://api.github.com/repos/landonhalley/playify/commits/main"
+GITHUB_ZIP_URL = "https://github.com/landonhalley/playify/archive/refs/heads/main.zip"
 
 def get_current_version(project_root: Path) -> str | None:
     """Read the current commit SHA from data/version.json."""
