@@ -104,6 +104,16 @@ Playify natively supports Linux with an automated setup script.
 4. The script will set up your virtual environment, automatically download a local copy of FFmpeg, and launch the dashboard.
 </details>
 
+<details>
+<summary><b>[ pterodactyl / pelican panel ]</b></summary>
+
+1. Import [`pterodactyl/egg-playify.json`](pterodactyl/egg-playify.json) into your panel.
+2. Create a server with the **Playify** egg and enter your Discord token.
+3. Start it. The bot updates itself from this repository on every start.
+
+See [`pterodactyl/README.md`](pterodactyl/README.md) for details.
+</details>
+
 ---
 
 ### # commands
